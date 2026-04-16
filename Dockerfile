@@ -25,8 +25,9 @@ RUN apt-get update && \
 COPY . .
 COPY --from=uibuilder /src/dist ./ui/dist
 
-# Build with Cairo support (native rmc-go)
-RUN go generate ./... && \
+# Tidy modules (merging two PRs leaves go.mod needing cleanup) then build
+RUN go mod tidy && \
+    go generate ./... && \
     CGO_ENABLED=1 go build -tags cairo -ldflags "-s -w -X main.version=${VERSION}" -o rmfakecloud-docker ./cmd/rmfakecloud/
 
 # Final runtime image - use Debian slim instead of Python

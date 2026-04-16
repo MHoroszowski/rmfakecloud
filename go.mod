@@ -66,3 +66,5 @@ require (
 	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/protobuf v1.33.0 // indirect
 )
+
+replace github.com/joagonca/rmc-go => github.com/MHoroszowski/rmc-go fc038bfa0e18710763ac3a20c0e0c658c11746ef
