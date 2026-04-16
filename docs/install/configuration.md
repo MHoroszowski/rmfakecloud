@@ -11,6 +11,7 @@ The configuration is made through environment variables.
 | `LOGLEVEL`        | Set the log verbosity. Default is **info**, set to **debug** for more logging or **warn**, **error** for less |
 | `RM_HTTPS_COOKIE` | For the UI, force cookies to be available only via https |
 | `RM_TRUST_PROXY`  | Trust the proxy for client ip addresses (X-Forwarded-For/X-Real-IP) default false |
+| `HASH_SCHEMA_VERSION` | Hash tree schema version: "3" or "4" (default: 3) |
 
 ## Handwriting recognition
 
@@ -38,3 +39,57 @@ To be able to send email from your reMarkable, fill the following variables:
 | `RM_SMTP_NOTLS` | don't use tls |
 | `RM_SMTP_STARTTLS` | use starttls command, should be combined with NOTLS. in most cases port 587 should be used |
 | `RM_SMTP_INSECURE_TLS` | If set, don't check the server certificate (not recommended) |
+
+## Screen sharing
+
+| Variable name     | Description |
+|-------------------|-------------|
+| `MQTT_PORT`       | Port for MQTT broker (default: 8883) |
+| `ICE_SERVERS`     | JSON array of WebRTC ICE servers. Default: none. Format: `[{"urls":["stun:stun.l.google.com:19302"]}]` or with TURN: `[{"urls":["turn:turn.example.com:3478"],"username":"user","credential":"pass"}]` |
+| `TLS_CERT`          | `path/to/cert`, required for screen sharing |
+| `TLS_KEY`           | `/path/to/key`, required for screen sharing |
+
+TLS certificates are required for screen sharing. Desktop apps may not use system certificate store for MQTT.  
+Requires overriding DNS for `vernemq-prod.cloud.remarkable.engineering` to point to your rmfakecloud instance and using a TCP (not HTTP) reverse proxy.  
+Without `ICE_SERVERS` set, screen sharing will work over USB and if the tablet and desktop app are on the same network.
+
+### Reverse proxy for MQTT (Screen sharing)
+
+MQTT uses TCP with TLS. Typical reverse proxies require TCP stream forwarding rather than HTTP proxying.
+
+#### nginx (stream module)
+
+```nginx
+stream {
+    upstream mqtt {
+        server rmfakecloud:8883;
+    }
+
+    server {
+        listen 8883;
+        proxy_pass mqtt;
+        proxy_connect_timeout 5s;
+    }
+}
+```
+
+#### Traefik (TCP router)
+
+```yaml
+tcp:
+  routers:
+    mqtt:
+      rule: "HostSNI(`*`)"
+      service: mqtt
+      entryPoints:
+        - mqtt
+  services:
+    mqtt:
+      loadBalancer:
+        servers:
+          - address: "rmfakecloud:8883"
+
+entryPoints:
+  mqtt:
+    address: ":8883"
+```

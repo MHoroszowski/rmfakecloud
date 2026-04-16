@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
 	"net/mail"
 	"net/url"
@@ -75,6 +76,10 @@ const (
 	EnvLogFile     = "RM_LOGFILE"
 	envHTTPSCookie = "RM_HTTPS_COOKIE"
 	envTrustProxy  = "RM_TRUST_PROXY"
+
+	envMQTTPort          = "MQTT_PORT"
+	envICEServers        = "ICE_SERVERS"
+	envHashSchemaVersion = "HASH_SCHEMA_VERSION"
 )
 
 // Config config
@@ -96,6 +101,9 @@ type Config struct {
 	HWRLangOverride   string
 	HTTPSCookie       bool
 	TrustProxy        bool
+	MQTTPort          string
+	ICEServers        []interface{}
+	HashSchemaVersion string
 }
 
 // Verify verify
@@ -119,6 +127,18 @@ func (cfg *Config) Verify() {
 	}
 	if cfg.HWRHmac == "" {
 		log.Info("provide the myScript hmac in: " + envHwrHmac)
+	}
+
+	if cfg.Certificate.Certificate == nil {
+		log.Info("For HTTPS, provide " + envTLSCert + " and " + envTLSKey)
+	} else {
+		log.Info("MQTT will use provided TLS certificate")
+	}
+
+	if len(cfg.ICEServers) > 0 {
+		log.Infof("WebRTC configured with %d ICE server(s)", len(cfg.ICEServers))
+	} else {
+		log.Info("No ICE servers configured - screenshare will only work on local networks")
 	}
 }
 
@@ -173,7 +193,7 @@ func FromEnv() *Config {
 		uploadURL = "https://" + DefaultHost
 	} else {
 		u, err := url.Parse(uploadURL)
-		if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == ""  {
+		if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
 			log.Fatalf("%s '%s' cannot be parsed, or missing scheme (http|https) %v", EnvStorageURL, uploadURL, err)
 		}
 		if u.Port() != "" {
@@ -215,6 +235,28 @@ func FromEnv() *Config {
 
 	trustProxy, _ := strconv.ParseBool(os.Getenv(envTrustProxy))
 
+	mqttPort := os.Getenv(envMQTTPort)
+	if mqttPort == "" {
+		mqttPort = "8883"
+	}
+
+	var iceServers []interface{}
+	iceServersJSON := os.Getenv(envICEServers)
+	if iceServersJSON != "" {
+		err := json.Unmarshal([]byte(iceServersJSON), &iceServers)
+		if err != nil {
+			log.Warnf("Failed to parse %s: %v", envICEServers, err)
+			iceServers = nil
+		}
+	}
+
+	hashSchemaVersion := os.Getenv(envHashSchemaVersion)
+	if hashSchemaVersion == "" {
+		hashSchemaVersion = "3"
+	} else if hashSchemaVersion != "3" && hashSchemaVersion != "4" {
+		log.Fatalf("%s must be either '3' or '4', got: %s", envHashSchemaVersion, hashSchemaVersion)
+	}
+
 	cfg := Config{
 		Port:              port,
 		StorageURL:        uploadURL,
@@ -230,6 +272,9 @@ func FromEnv() *Config {
 		HWRLangOverride:   os.Getenv(envHwrLangOverride),
 		HTTPSCookie:       httpsCookie,
 		TrustProxy:        trustProxy,
+		MQTTPort:          mqttPort,
+		ICEServers:        iceServers,
+		HashSchemaVersion: hashSchemaVersion,
 	}
 	return &cfg
 }
@@ -254,6 +299,13 @@ General:
 	%s	Write logs to file
 	%s Send auth cookie only via https
 	%s	Trust the proxy for X-Forwarded-For/X-Real-IP (set only if behind a proxy)
+	%s	Hash tree schema version: "3" or "4" (default: 3)
+
+MQTT (for screenshare):
+	%s	MQTT TCP port (default: 8883)
+	%s	ICE servers for WebRTC (JSON array format)
+			Example: [{"urls":["stun:stun.l.google.com:19302"]}]
+			With auth: [{"urls":["turn:server:port"],"username":"user","credential":"pass"}]
 
 Emails, smtp:
 	%s
@@ -287,6 +339,10 @@ V6 file format support:
 		EnvLogFile,
 		envHTTPSCookie,
 		envTrustProxy,
+		envHashSchemaVersion,
+
+		envMQTTPort,
+		envICEServers,
 
 		envSMTPServer,
 		envSMTPUsername,

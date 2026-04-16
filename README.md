@@ -15,7 +15,7 @@ See the [project documentation](https://ddvk.github.io/rmfakecloud/) for setup a
 
 The current release of rmfakecloud supports file synchronization up to **reMarkable software 3.22.0**. Newer releases have not been tested yet.
 
-Use the `rmfakecloud-proxy` from [toltec](https://github.com/toltec-dev/toltec/). [More in the doc](https://ddvk.github.io/rmfakecloud/remarkable/setup/).
+See the [documentation](https://ddvk.github.io/rmfakecloud/remarkable/setup/) for how to setup your device to use rmfakecloud.
 
 
 ## Feature Parity With Official Cloud
@@ -27,7 +27,7 @@ Use the `rmfakecloud-proxy` from [toltec](https://github.com/toltec-dev/toltec/)
 | [Send document by email](https://ddvk.github.io/rmfakecloud/install/configuration/#email-settings) | ✅ |  |
 | [Handwriting recognition](https://ddvk.github.io/rmfakecloud/install/configuration/#handwriting-recognition) | ✅ |  |
 | Handwriting search | ❌ |  |
-| Screen sharing | 🟡 | unlocked on reMarkable but doesn't work remotely |
+| [Screen sharing](https://ddvk.github.io/rmfakecloud/install/configuration/#screen-sharing) | ✅ | Requires TLS and special proxying |
 | [Storage integrations](https://ddvk.github.io/rmfakecloud/usage/integrations/) | ✅ |  |
 | Integration with Dropbox | 🟡 | [WIP](https://github.com/ddvk/rmfakecloud/blob/master/internal/integrations/dropbox.go) |
 | Integration with Google Drive | 🟡 | [WIP](https://github.com/ddvk/rmfakecloud/pull/241) |
